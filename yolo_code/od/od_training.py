@@ -12,8 +12,8 @@ from pathlib import Path
 
 
 def train_with_symbol_removal():
-    # data_root = "/datadrive"
-    data_root = "/Users/tony.tu/Desktop/戴承智慧/polyp"
+    data_root = "/datadrive/polyp"
+    # data_root = "/Users/tony.tu/Desktop/戴承智慧/polyp"
 
     # 配置參數（完全照原本的方式）
     data_yaml = f'{data_root}/yolo_data/od/data.yaml'
@@ -21,8 +21,8 @@ def train_with_symbol_removal():
     batch_size = 1
     img_size = 640
     project = f'{data_root}/yolo_output/runs/detect'
-    # name = '2026_03_16(1)'
-    name = "test"
+    name = '2026_03_26(1)'
+    # name = "test"
 
     classes = [0]  # 只訓練結節類別（0）
     # 檢查設備
