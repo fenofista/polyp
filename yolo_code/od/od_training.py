@@ -64,8 +64,8 @@ def train_with_symbol_removal():
         scale=0.5,
         flipud=0.0,
         fliplr=0.5,
-        # mosaic=1.0,
-        # mixup=1.0,
+        mosaic=0.0,
+        mixup=0.0,
 
         # 優化器
         optimizer='AdamW',
