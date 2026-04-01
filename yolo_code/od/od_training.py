@@ -12,16 +12,17 @@ from pathlib import Path
 
 
 def train_with_symbol_removal():
-    data_root = "/datadrive/polyp"
+    data_root = "/root/Desktop/polyp"
+    output_root = "/datadrive/polyp/yolo_output"
     # data_root = "/Users/tony.tu/Desktop/戴承智慧/polyp"
 
     # 配置參數（完全照原本的方式）
     data_yaml = f'{data_root}/yolo_data/od/data.yaml'
     epochs = 100
-    batch_size = 1
+    batch_size = -1
     img_size = 640
-    project = f'{data_root}/yolo_output/runs/detect'
-    name = '2026_03_26(1)'
+    project = f'{output_root}/runs/detect'
+    name = '2026_04_01(1)'
     # name = "test"
 
     classes = [0]  # 只訓練結節類別（0）
@@ -63,7 +64,7 @@ def train_with_symbol_removal():
         scale=0.5,
         flipud=0.0,
         fliplr=0.5,
-        mosaic=1.0,
+        # mosaic=1.0,
         # mixup=1.0,
 
         # 優化器
