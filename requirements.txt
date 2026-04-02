@@ -2,3 +2,5 @@ numpy==2.4.4
 opencv_python==4.13.0.92
 torch==2.10.0
 ultralytics==8.4.23
+pandas==3.0.2
+seaborn==0.13.2
