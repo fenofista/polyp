@@ -31,14 +31,14 @@ except (ImportError, Exception):
 
 MODEL_PATH = Path("/datadrive/polyp/yolo_output/runs/detect/2026_04_15(1)/weights/best.pt")
 VIDEO_DIR = Path("videos/")
-OUT_ROOT = Path("pre_v3")
+OUT_ROOT = Path("/datadrive/polyp/data/pre_v3")
 
 # Inference settings
 CONF_THRESH = 0.5
-BATCH_SIZE = 800
+BATCH_SIZE = 256  # Smaller batch to reduce memory
 
 # Frame queue (prefetch buffer)
-FRAME_QUEUE_SIZE = BATCH_SIZE * 4  # 2048 frames = ~34 seconds @ 60fps
+FRAME_QUEUE_SIZE = 512  # ~8 seconds @ 60fps, much less memory
 
 # Review settings
 KEYFRAME = 3000
@@ -240,15 +240,16 @@ def infer_video(video_path: Path) -> dict:
         imgs = [item[1] for item in batch]
         res = model.predict(source=imgs, conf=CONF_THRESH, imgsz=640, device=DEVICE, verbose=False, stream=True)
         hits = []
-        for (fid, _), r in zip(batch, res):
+        for (fid, orig), r in zip(batch, res):
             if r.boxes is not None and len(r.boxes) > 0:
-                hit = (fid, r.plot(), boxes_to_yolo(r))
+                hit = (fid, orig, r.plot(), boxes_to_yolo(r))
                 hits.append(hit)
         return hits
 
-    def save_detection(fid, annotated, label_txt):
+    def save_detection(fid, orig, annotated, label_txt):
         """Save detection results."""
         stem = f"{pid}_{fid:06d}"
+        cv2.imwrite(str(tmp_dir / f"{stem}.jpg"), orig)
         cv2.imwrite(str(tmp_dir / f"{stem}_vis.jpg"), annotated)
         (tmp_dir / f"{stem}.txt").write_text(label_txt)
 
@@ -312,27 +313,27 @@ def infer_video(video_path: Path) -> dict:
             infer_buf = []
             total_detected += len(hits)
 
-            for fid, annotated, label_txt in hits:
+            for fid, orig, annotated, label_txt in hits:
                 if fid < KEYFRAME:
-                    pre_buf.append((fid, annotated, label_txt))
+                    pre_buf.append((fid, orig, annotated, label_txt))
                     # Save every REVIEW_EVERY_before
                     while len(pre_buf) >= REVIEW_EVERY_before:
-                        f, a, l = pre_buf[REVIEW_EVERY_before - 1]
-                        save_pool.submit(save_detection, f, a, l)
+                        f, o, a, l = pre_buf[REVIEW_EVERY_before - 1]
+                        save_pool.submit(save_detection, f, o, a, l)
                         saved_count += 1
                         pre_buf = pre_buf[REVIEW_EVERY_before:]
                 else:
                     if not crossed:
                         crossed = True
                         if pre_buf:
-                            f, a, l = pre_buf[-1]
-                            save_pool.submit(save_detection, f, a, l)
+                            f, o, a, l = pre_buf[-1]
+                            save_pool.submit(save_detection, f, o, a, l)
                             saved_count += 1
                             pre_buf = []
-                    post_buf.append((fid, annotated, label_txt))
+                    post_buf.append((fid, orig, annotated, label_txt))
                     while len(post_buf) >= REVIEW_EVERY_after:
-                        f, a, l = post_buf[REVIEW_EVERY_after - 1]
-                        save_pool.submit(save_detection, f, a, l)
+                        f, o, a, l = post_buf[REVIEW_EVERY_after - 1]
+                        save_pool.submit(save_detection, f, o, a, l)
                         saved_count += 1
                         post_buf = post_buf[REVIEW_EVERY_after:]
 
@@ -340,24 +341,24 @@ def infer_video(video_path: Path) -> dict:
     if infer_buf:
         hits = flush_batch(infer_buf)
         total_detected += len(hits)
-        for fid, annotated, label_txt in hits:
+        for fid, orig, annotated, label_txt in hits:
             if fid < KEYFRAME:
-                pre_buf.append((fid, annotated, label_txt))
+                pre_buf.append((fid, orig, annotated, label_txt))
             else:
                 if not crossed:
                     crossed = True
                     if pre_buf:
-                        f, a, l = pre_buf[-1]
-                        save_pool.submit(save_detection, f, a, l)
+                        f, o, a, l = pre_buf[-1]
+                        save_pool.submit(save_detection, f, o, a, l)
                         saved_count += 1
                         pre_buf = []
-                post_buf.append((fid, annotated, label_txt))
+                post_buf.append((fid, orig, annotated, label_txt))
 
     # Save remaining
     for buf in (pre_buf, post_buf):
         if buf:
-            f, a, l = buf[-1]
-            save_pool.submit(save_detection, f, a, l)
+            f, o, a, l = buf[-1]
+            save_pool.submit(save_detection, f, o, a, l)
             saved_count += 1
 
     # Wait for saves
